@@ -30,7 +30,7 @@ pos = nx.spring_layout(G, seed=seed)
 env = FogEnv(G, pos, edge_nodes)
 env.seed(seed)
 state, done = env.reset()
-print(state)
+
 # env.render(text='episode: XX, action: XX, reward: XX',path="tmp/images/image0.png")
 # Image(filename="tmp/images/image0.png")
 
@@ -39,7 +39,7 @@ env = FogEnv(G, pos, edge_nodes)
 env.seed(seed)
 env.reset()
 
-episodes = 1
+episodes = 3
 frame = 1
 render = True
 batch_size = 10
@@ -63,27 +63,32 @@ for episode in tqdm(range(episodes)):
 
         # action = agent.act(state)
         action = agent.pickOne(state)
+        # print(state["feat"])
+        # print("HERE")
+        # print(action)
+
         state_next, reward, done = env.step(action)
         agent.remember(state, action, reward, state_next, done)
 
         loss = agent.optimize_model()  # or train the model after each action?
-
-        if render:
-            env.render(text='episode: {}, step: {}, action: {}, reward: {}'.format(episode, frame - start_frame, action,
-                                                                                   reward),
-                       path="tmp/images/image_%08d.png" % (frame))
-
+        #
+        # if render:
+        #     env.render(text='episode: {}, step: {}, action: {}, reward: {}'.format(episode, frame - start_frame, action,
+        #                                                                            reward),
+        #                path="tmp/images/image_%08d.png" % (frame))
+        #
         state = state_next
         returns += reward
         frame += 1
 
-    end_time = timer()
-    fps = (frame - start_frame) / (end_time - start_time)
-    # To comment
-    print('episode: {}, frame: {}, fps: {}, returns: {}'.format(episode, frame, int(fps), returns))
 
-    writer.add_scalar('fps', fps, episode)
-    writer.add_scalar('returns/frame', returns, episode)
-    writer.add_scalar('returns/episode', returns, episode)
+    # end_time = timer()
+    # fps = (frame - start_frame) / (end_time - start_time)
+    # # To comment
+    # print('episode: {}, frame: {}, fps: {}, returns: {}'.format(episode, frame, int(fps), returns))
+    #
+    # writer.add_scalar('fps', fps, episode)
+    # writer.add_scalar('returns/frame', returns, episode)
+    # writer.add_scalar('returns/episode', returns, episode)
 
 writer.close()

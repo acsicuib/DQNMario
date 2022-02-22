@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from numpy.random import RandomState
 from torch_geometric.data import Data
+from torch_geometric.loader import DataLoader
 
 from action import Action
 from models import MLP
@@ -16,7 +17,7 @@ class Agent():
         self.gamma = 0.95  # discount rate
         self.epsilon = 1.0  # exploration rate
         self.rnd = RandomState(0)  # seed
-        self.batch_size = 5
+        self.batch_size = 3
         self.memory = deque(maxlen=50)
         self.model = MLP(num_node_features=num_node_features, hidden_channels=8, num_classes=num_classes)
 
@@ -31,20 +32,27 @@ class Agent():
             # TODO
             # generate data.x
 
-            _, pred = self.model(data.x, data.edge_index).max(dim=1)
+            # _, pred = self.model(data.x, data.edge_index).max(dim=1)
 
-            print(pred)
+            # print(pred)
+            return self.pickOne(state) #TEST
             # TODO from pred get action
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
 
+    def __get_y_vector(self,shape,action):
+        y = np.zeros(shape[0])
+        if action == Action("Migrate"):
+            y[action.relative_dst[0]] = 1
+        return y
+
     def __get_loader_states(self, samples):
         data_list = []
-        for state, *rest in samples:
+        for state, action, *rest in samples:
+            y = self.__get_y_vector(state["feat"].shape,action)
             data = Data(x=state["feat"], edge_index=state["edges"], y=y)
             data_list.append(data)
-
         loader = DataLoader(data_list, batch_size=self.batch_size)
         return loader
 
@@ -58,7 +66,7 @@ class Agent():
                                  if done is False]
 
         loader_states = self.__get_loader_states(samples)
-        actions = self.__get_actions(samples)
+        # actions = self.__get_actions(samples)
 
         # TODO
         #         # Organize the data?
@@ -88,4 +96,6 @@ class Agent():
             neighs = state["feat"][:, 0][state["feat"][:, 0] >= 0]
             assert len(neighs) > 0
             a.dst = np.random.choice(neighs[1:], 1)
+            a.relative_dst = np.where(neighs==a.dst[0])[0]
+            assert len(a.dst)==len(a.relative_dst)
         return a
