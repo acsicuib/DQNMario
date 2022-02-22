@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from numpy.random import RandomState
 from torch_geometric.data import Data
- 
+
 from action import Action
 from models import MLP
 
@@ -40,10 +40,9 @@ class Agent():
         self.memory.append((state, action, reward, next_state, done))
 
     def __get_loader_states(self, samples):
-        for state, _ in samples:
-            print(sample)
-            break
-            data = Data(x=node_feats, edge_index=edge_index, y=y)
+        data_list = []
+        for state, *rest in samples:
+            data = Data(x=state["feat"], edge_index=state["edges"], y=y)
             data_list.append(data)
 
         loader = DataLoader(data_list, batch_size=self.batch_size)

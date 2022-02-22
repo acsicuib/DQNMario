@@ -1,36 +1,35 @@
+import random
+from timeit import default_timer as timer
+
+import networkx as nx
+import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
-from gymFogEnv import FogEnv
-import random
-import numpy as np
-from IPython.display import Image
-import networkx as nx
-from DQNAgent import Agent
-from action import Action
-from timeit import default_timer as timer
 from tqdm import tqdm
 
+from DQNAgent import Agent
+from action import Action
+from gymFogEnv import FogEnv
+
 seed = 0
-random.seed=seed
+random.seed = seed
 np.random.seed(seed)
 torch.manual_seed(seed)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-
 logging_dir = "tmp/tensorlogs/"
 writer = SummaryWriter(logging_dir)
 
-
 # Topology
 G = nx.balanced_tree(2, 5)
-edge_nodes = [x for (x,d) in nx.degree(G) if d==1]
-pos=nx.spring_layout(G,seed=seed)
+edge_nodes = [x for (x, d) in nx.degree(G) if d == 1]
+pos = nx.spring_layout(G, seed=seed)
 
-env = FogEnv(G,pos,edge_nodes)
+env = FogEnv(G, pos, edge_nodes)
 env.seed(seed)
-state,done = env.reset()
+state, done = env.reset()
 print(state)
 # env.render(text='episode: XX, action: XX, reward: XX',path="tmp/images/image0.png")
 # Image(filename="tmp/images/image0.png")
@@ -45,7 +44,7 @@ frame = 1
 render = True
 batch_size = 10
 
-agent = Agent(num_node_features=env.num_features,num_classes=len(Action()))
+agent = Agent(num_node_features=env.num_features, num_classes=len(Action()))
 
 if render:
     env.render(text='episode: 0, step: 0, action: -, reward: -',
@@ -70,7 +69,8 @@ for episode in tqdm(range(episodes)):
         loss = agent.optimize_model()  # or train the model after each action?
 
         if render:
-            env.render(text='episode: {}, step: {}, action: {}, reward: {}'.format(episode, frame - start_frame, action,reward),
+            env.render(text='episode: {}, step: {}, action: {}, reward: {}'.format(episode, frame - start_frame, action,
+                                                                                   reward),
                        path="tmp/images/image_%08d.png" % (frame))
 
         state = state_next
@@ -87,4 +87,3 @@ for episode in tqdm(range(episodes)):
     writer.add_scalar('returns/episode', returns, episode)
 
 writer.close()
-
