@@ -6,9 +6,18 @@ import torch
 from numpy.random import RandomState
 from torch_geometric.data import Data
 from torch_geometric.loader import DataLoader
+import torch.nn.functional as F
+from torch.autograd import Variable
 
 from action import Action
 from models import MLP
+
+use_cuda = torch.cuda.is_available()
+FloatTensor = torch.cuda.FloatTensor if use_cuda else torch.FloatTensor
+LongTensor = torch.cuda.LongTensor if use_cuda else torch.LongTensor
+ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
+Tensor = FloatTensor
+
 
 
 class Agent():
@@ -51,44 +60,69 @@ class Agent():
         data_list = []
         for state, action, *rest in samples:
             y = self.__get_y_vector(state["feat"].shape,action)
-            data = Data(x=state["feat"], edge_index=state["edges"], y=y)
+            node_feats = torch.tensor(state["feat"], dtype=torch.float)
+            edge_index = torch.tensor(state["edges"], dtype=torch.long)
+            y = torch.tensor(y, dtype=torch.int64)
+            data = Data(x=node_feats, edge_index=edge_index, y=y)
             data_list.append(data)
         loader = DataLoader(data_list, batch_size=self.batch_size)
         return loader
+
+    # def __get_loader_states(self, samples):
+    #     data_list = []
+    #     for _, _, _, next_state,_ in samples:
+    #         y = self.__get_y_vector(next_state["feat"].shape,action)
+    #         node_feats = torch.tensor(next_state["feat"], dtype=torch.float)
+    #         edge_index = torch.tensor(next_state["edges"], dtype=torch.long)
+    #         y = torch.tensor(y, dtype=torch.int64)
+    #         data = Data(x=node_feats, edge_index=edge_index, y=y)
+    #         data_list.append(data)
+    #     loader = DataLoader(data_list, batch_size=self.batch_size)
+    #     return loader
 
     def optimize_model(self):
         if len(self.memory) < self.batch_size:
             return
 
         samples = random.sample(self.memory, self.batch_size)
-        non_final_next_states = [(state, action, reward, state_next, done)
-                                 for state, action, reward, state_next, done in samples
-                                 if done is False]
+
+        non_final_next_states = [(s,a,r,ns,done) for (s,a,r,ns,done) in samples if done is False]
+        print(len(samples))
+        print(len(non_final_next_states))
+        non_final_next_states = list(self.__get_loader_states(non_final_next_states))[0]
+        print(non_final_next_states)
+        #El problema es que el non_final_maks debería de tener 4 (salidas) por cada done
+        non_final_mask = [int(done) for *rest, done in samples ] #could be improved... * *features
+        non_final_mask = ByteTensor(non_final_mask)
 
         loader_states = self.__get_loader_states(samples)
-        # actions = self.__get_actions(samples)
+        data =  list(loader_states)[0] #loader has len batch_size
+        output, state_action_values  = self.model(data.x, data.edge_index,data.batch).max(dim=1)
 
-        # TODO
-        #         # Organize the data?
-        #         #for state, action, reward, next_state, done in minibatch:
+        next_state_values = Variable(torch.zeros(self.batch_size).type(Tensor))
 
-        #         #for data in train_loader:
-        #             data = data.to(device)
-        #             self.optimizer.zero_grad()
-        #             output = self.model(data.x, data.edge_index,data.batch) #.max(dim=1)
-        #             loss = self.loss_op(output, data.y)
-        #             loss.backward()
-        #             total_loss += data.num_graphs * loss.item()
-        #             self.optimizer.step()
-        #             epoch_loss = total_loss / len(train_loader.dataset)
-        #             #writer.add_scalar('Loss/train', epoch_loss, global_step = epoch)
+        print(next_state_values)
+        print(non_final_mask)
+        print(self.model(non_final_next_states.x,non_final_next_states.edge_index).max(dim=1)[0])
+        next_state_values[non_final_mask] =  self.model(non_final_next_states.x,non_final_next_states.edge_index).max(dim=1)
 
-        #         # Keeping track of loss
-        #         loss = history.history['loss'][0]
-        #         if self.epsilon > self.epsilon_min:
-        #             self.epsilon *= self.epsilon_decay
-        #         return loss
-        return None
+
+        # print(data)
+        # print("P:",pred)
+        # print("Y:",data.y)
+        # print("-" * 10)
+
+        # # Compute the expected Q values
+        # expected_state_action_values = (next_state_values * self.gamma) + reward_batch
+        #
+        # # Compute Huber loss
+        # loss = F.smooth_l1_loss(state_action_values, expected_state_action_values)
+        #
+        # self.optimizer.zero_grad()
+        # loss.backward()
+        # self.optimizer.step()
+
+
 
     def pickOne(self, state):  # Do a random action
         a = Action().sample()
