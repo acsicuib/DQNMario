@@ -1,5 +1,5 @@
 import random
-from collections import deque
+from collections import deque, namedtuple
 
 import numpy as np
 import torch
@@ -19,6 +19,8 @@ ByteTensor = torch.cuda.ByteTensor if use_cuda else torch.ByteTensor
 Tensor = FloatTensor
 
 
+Transition = namedtuple('Transition',
+                        ('state', 'action', 'reward', 'next_state', "done"))
 
 class Agent():
 
@@ -56,17 +58,28 @@ class Agent():
             y[action.relative_dst[0]] = 1
         return y
 
-    def __get_loader_states(self, samples):
+    # def __get_loader_states(self, samples):
+    #     data_list = []
+    #     for state, action, *rest in samples:
+    #         y = self.__get_y_vector(state["feat"].shape,action)
+    #         node_feats = torch.tensor(state["feat"], dtype=torch.float)
+    #         edge_index = torch.tensor(state["edges"], dtype=torch.long)
+    #         y = torch.tensor(y, dtype=torch.int64)
+    #         data = Data(x=node_feats, edge_index=edge_index, y=y)
+    #         data_list.append(data)
+    #     loader = DataLoader(data_list, batch_size=self.batch_size)
+    #     return loader
+
+    def get_loader(self, samples):
         data_list = []
-        for state, action, *rest in samples:
-            y = self.__get_y_vector(state["feat"].shape,action)
+        for state in samples:
             node_feats = torch.tensor(state["feat"], dtype=torch.float)
             edge_index = torch.tensor(state["edges"], dtype=torch.long)
-            y = torch.tensor(y, dtype=torch.int64)
-            data = Data(x=node_feats, edge_index=edge_index, y=y)
+            data = Data(x=node_feats, edge_index=edge_index)
             data_list.append(data)
         loader = DataLoader(data_list, batch_size=self.batch_size)
         return loader
+
 
     # def __get_loader_states(self, samples):
     #     data_list = []
@@ -85,27 +98,51 @@ class Agent():
             return
 
         samples = random.sample(self.memory, self.batch_size)
+        batch = Transition(*zip(*samples)) #bestial
 
-        non_final_next_states = [(s,a,r,ns,done) for (s,a,r,ns,done) in samples if done is False]
+        non_final_mask = ByteTensor(batch.done).neg() # Non final states are ok, so done==False is True,
+
+        #non_final_next_states = Variable(torch.cat([s for (s,d) in zip(batch.next_state,batch.done) if d is False]),volatile=True)
+
+        non_final_next_states = [s for (s,d) in zip(batch.next_state,batch.done) if d is False]
+
         print(len(samples))
+        print(len(non_final_mask))
         print(len(non_final_next_states))
-        non_final_next_states = list(self.__get_loader_states(non_final_next_states))[0]
-        print(non_final_next_states)
+
+        # return None
+        # non_final_next_states = list(self.__get_loader_states(non_final_next_states))[0]
+
+        # print(non_final_next_states)
         #El problema es que el non_final_maks debería de tener 4 (salidas) por cada done
-        non_final_mask = [int(done) for *rest, done in samples ] #could be improved... * *features
-        non_final_mask = ByteTensor(non_final_mask)
+        # non_final_mask = [int(done) for *rest, done in samples ] #could be improved... * *features
+        # non_final_mask = ByteTensor(non_final_mask)
 
-        loader_states = self.__get_loader_states(samples)
-        data =  list(loader_states)[0] #loader has len batch_size
-        output, state_action_values  = self.model(data.x, data.edge_index,data.batch).max(dim=1)
+        loader_states = self.get_loader(batch.state)
+        data = list(loader_states)[0] #loader len equals batch_size
 
-        next_state_values = Variable(torch.zeros(self.batch_size).type(Tensor))
+        print("T ",[float(a.code) for a in batch.action])
 
-        print(next_state_values)
-        print(non_final_mask)
-        print(self.model(non_final_next_states.x,non_final_next_states.edge_index).max(dim=1)[0])
-        next_state_values[non_final_mask] =  self.model(non_final_next_states.x,non_final_next_states.edge_index).max(dim=1)
+        action_batch = Variable(torch.cat([FloatTensor(a.code) for a in batch.action]))
+        print("AB:",action_batch)
 
+        model_batch = self.model(data.x, data.edge_index,data.batch)
+
+        state_action_values = model_batch.gather(1, action_batch)
+
+        print(state_action_values)
+        return None
+        #
+        #
+        # output, state_action_values = self.model(data.x, data.edge_index,data.batch).max(dim=1)
+        #
+        # next_state_values = Variable(torch.zeros(self.batch_size).type(Tensor))
+        #
+        # print(next_state_values)
+        # print(non_final_mask)
+        # print(self.model(non_final_next_states.x,non_final_next_states.edge_index).max(dim=1)[0])
+        # next_state_values[non_final_mask] =  self.model(non_final_next_states.x,non_final_next_states.edge_index).max(dim=1)
+        #
 
         # print(data)
         # print("P:",pred)
@@ -113,6 +150,7 @@ class Agent():
         # print("-" * 10)
 
         # # Compute the expected Q values
+        # reward_batch = Variable(torch.cat(batch.reward))
         # expected_state_action_values = (next_state_values * self.gamma) + reward_batch
         #
         # # Compute Huber loss
