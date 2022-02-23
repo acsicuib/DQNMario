@@ -4,6 +4,11 @@ import numpy as np
 from action import Action
 import matplotlib.pyplot as plt
 import PIL
+from gym import spaces
+from collections import namedtuple
+
+State = namedtuple("State",
+                   ("x","edge_index"))
 
 class FogEnv(gym.Env):
     def __init__(self, graph, pos, edge_nodes, id_node_cloud=0):
@@ -12,7 +17,9 @@ class FogEnv(gym.Env):
         self.node_cloud = id_node_cloud
         self.pos = pos
         self.edge_nodes = edge_nodes
+
         self.max_degree = max(dict(nx.degree(self.G)).values())
+        self.action_space = self.max_degree
 
         # Future issue: level in other type of topologies?
         self.level_node = nx.single_source_shortest_path_length(self.G,
@@ -31,6 +38,8 @@ class FogEnv(gym.Env):
         self.features = np.array(features)
         self.num_features = self.features.shape[1]
 
+
+
     def __get_neighs(self):
         return np.array([n for n in self.G.neighbors(self.agent_alloc)])
 
@@ -44,7 +53,7 @@ class FogEnv(gym.Env):
         edge_index = [[*np.zeros(len(neighs), dtype=int), *np.arange(1, len(neighs) + 1), *[-1] * diff * 2],
                       [*np.arange(1, len(neighs) + 1), *np.zeros(len(neighs), dtype=int), *[-1] * diff * 2]]
 
-        return {"feat": node_feats, "edges": edge_index}
+        return State(node_feats,edge_index)
 
     def reset(self):
         self.agent_alloc = self.node_cloud
@@ -54,10 +63,10 @@ class FogEnv(gym.Env):
     def step(self, action):
         reward = 0
 
-        if action == Action("NoOperation"):
+        if action == "NoOperation":
             None
 
-        if action == Action("Migrate"):
+        if action == "Migrate":
             neighs = self.__get_neighs()
             assert len(action.dst) > 0
             assert action.dst[0] in neighs

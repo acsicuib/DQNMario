@@ -8,7 +8,7 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from DQNAgent import Agent
-from action import Action
+from action import Action, action_sample, ACTION_NAMES
 from gymFogEnv import FogEnv
 
 seed = 0
@@ -39,18 +39,22 @@ env = FogEnv(G, pos, edge_nodes)
 env.seed(seed)
 env.reset()
 
+print(action_sample(env.action_space))
+
+
 episodes = 3
 frame = 1
 render = True
 batch_size = 10
 
-agent = Agent(num_node_features=env.num_features, num_classes=len(Action()))
+agent = Agent(num_node_features=env.num_features, num_classes=len(ACTION_NAMES))
 
 if render:
     env.render(text='episode: 0, step: 0, action: -, reward: -',
                path="tmp/images/image_%08d.png" % (0))
 
-for episode in tqdm(range(episodes)):
+# for episode in tqdm(range(episodes)):
+for episode in range(1,episodes+1):
     # run episode
     start_time = timer()
     start_frame = frame
@@ -58,18 +62,18 @@ for episode in tqdm(range(episodes)):
     # initialize the episode
     state, done = env.reset()
 
-    returns = 0
+    score = 0
     while not done:
 
         # action = agent.act(state)
-        action = agent.pickOne(state)
+        action = agent.pickOne(state,env.action_space)
         # print(state["feat"])
         # print("HERE")
         # print(action)
 
         state_next, reward, done = env.step(action)
-        agent.remember(state, action, reward, state_next, done)
 
+        agent.remember(state, action, reward, state_next, done)
         loss = agent.optimize_model()  # or train the model after each action?
         #
         # if render:
@@ -78,17 +82,17 @@ for episode in tqdm(range(episodes)):
         #                path="tmp/images/image_%08d.png" % (frame))
         #
         state = state_next
-        returns += reward
+        score += reward
         frame += 1
 
 
     # end_time = timer()
     # fps = (frame - start_frame) / (end_time - start_time)
     # # To comment
-    # print('episode: {}, frame: {}, fps: {}, returns: {}'.format(episode, frame, int(fps), returns))
+    # print('episode: {}, frame: {}, fps: {}, score: {}'.format(episode, frame, int(fps), score))
     #
     # writer.add_scalar('fps', fps, episode)
-    # writer.add_scalar('returns/frame', returns, episode)
-    # writer.add_scalar('returns/episode', returns, episode)
+    # writer.add_scalar('score/frame', score, episode)
+    # writer.add_scalar('score/episode', score, episode)
 
 writer.close()
