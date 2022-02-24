@@ -38,9 +38,7 @@ state, done = env.reset()
 env = FogEnv(G, pos, edge_nodes)
 env.seed(seed)
 env.reset()
-
-print(action_sample(env.action_space))
-
+print("Max. action space ", env.max_degree)
 
 episodes = 3
 frame = 1
@@ -65,11 +63,11 @@ for episode in range(1,episodes+1):
     score = 0
     while not done:
 
-        # action = agent.act(state)
-        action = agent.pickOne(state,env.action_space)
+        action = agent.act(state,env.action_space)
+        # action = agent.pickOne(state,env.action_space)
         # print(state["feat"])
         # print("HERE")
-        # print(action)
+        print(action)
 
         state_next, reward, done = env.step(action)
 

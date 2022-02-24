@@ -25,14 +25,15 @@ Transition = namedtuple('Transition',
 class Agent():
 
     def __init__(self, num_node_features, num_classes):
+
         #TODO ADD HYPERPArAMETERS TO __INIT__
         self.gamma = 0.95  # discount rate
-        self.epsilon = 1.0  # exploration rate
+        self.epsilon = 0.05  # exploration rate
         self.rnd = RandomState(0)  # seed
         self.batch_size = 3
-        self.memory = deque(maxlen=50)
         self.tau = 2e-3
         self.learn_rate = 0.01
+        self.memory = deque(maxlen=50) # bigger than batch_size. fix by experimentations
 
         ####
 
@@ -42,40 +43,35 @@ class Agent():
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learn_rate)
         self.loss_op = torch.nn.CrossEntropyLoss()
 
-    def act(self, state):
+    def act(self, state,action_space):
         v = self.rnd.rand()
         if v <= self.epsilon:
-            return self.pickOne(state)
+            return self.pickOne(state,action_space)
         else:
-            # TODO
-            # generate data.x
+            node_feats = torch.tensor(state.x, dtype=torch.float)
+            edge_index = torch.tensor(state.edge_index, dtype=torch.long)
+            data = Data(x=node_feats, edge_index=edge_index)
+            self.model.eval()
+            with torch.no_grad():
+                action_values = self.model(data.x, data.edge_index)
+            self.model.train()
 
-            # _, pred = self.model(data.x, data.edge_index).max(dim=1)
+            # print(data)
+            # print("A",action_values)
 
-            # print(pred)
-            return self.pickOne(state) #TEST
-            # TODO from pred get action
+            type_oper = int(np.argmax(action_values)) # max. value of all probabilities, the index is the class of the operation
+            pos_relative_action = int(np.argmax(action_values.max(1)[0])) #Node
+
+            # print("type_oper",type_oper)
+            # print("pos_relative_action",pos_relative_action)
+            a = Action(action_space,type_oper,pos_relative_action)
+
+            # print(a)
+            return a
+
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
-
-    def __get_y_vector(self,shape,action):
-        y = np.zeros(shape[0])
-        if action == Action("Migrate"):
-            y[action.relative_dst[0]] = 1
-        return y
-
-    # def __get_loader_states(self, samples):
-    #     data_list = []
-    #     for state, action, *rest in samples:
-    #         y = self.__get_y_vector(state["feat"].shape,action)
-    #         node_feats = torch.tensor(state["feat"], dtype=torch.float)
-    #         edge_index = torch.tensor(state["edges"], dtype=torch.long)
-    #         y = torch.tensor(y, dtype=torch.int64)
-    #         data = Data(x=node_feats, edge_index=edge_index, y=y)
-    #         data_list.append(data)
-    #     loader = DataLoader(data_list, batch_size=self.batch_size)
-    #     return loader
 
     def get_loader(self, samples):
         data_list = []
@@ -87,50 +83,51 @@ class Agent():
         loader = DataLoader(data_list, batch_size=self.batch_size)
         return loader
 
-
-    # def __get_loader_states(self, samples):
-    #     data_list = []
-    #     for _, _, _, next_state,_ in samples:
-    #         y = self.__get_y_vector(next_state["feat"].shape,action)
-    #         node_feats = torch.tensor(next_state["feat"], dtype=torch.float)
-    #         edge_index = torch.tensor(next_state["edges"], dtype=torch.long)
-    #         y = torch.tensor(y, dtype=torch.int64)
-    #         data = Data(x=node_feats, edge_index=edge_index, y=y)
-    #         data_list.append(data)
-    #     loader = DataLoader(data_list, batch_size=self.batch_size)
-    #     return loader
-
     def optimize_model(self):
-
         if len(self.memory) < self.batch_size:
             return
 
         samples = random.sample(self.memory, self.batch_size)
         batch = Transition(*zip(*samples)) #bestial
-        batch_actions = [act.action for act in batch.action]
-        batch_actions = torch.tensor(batch_actions, dtype=torch.long)
 
+        batch_actions = np.array([act.space for act in batch.action]) # get the action.space from Action type
+        batch_actions = torch.tensor(batch_actions, dtype=torch.long)
+        # print(batch.state)
+        # print(batch_actions)
         # Q on S,a
         loader_states = self.get_loader(batch.state)
         data = list(loader_states)[0]  # loader len equals batch_size
 
         model_batch = self.model(data.x, data.edge_index, data.batch)
         Qsa = model_batch.gather(1,batch_actions)
-
+        # print("QSA ")
+        # print(Qsa)
         # Q on s', a'
         loader_states_prime = self.get_loader(batch.next_state)
         data_prime = list(loader_states_prime)[0]  # loader len equals batch_size
 
         Qsa_prime_target_values = self.target_model(data_prime.x,data_prime.edge_index,data_prime.batch).detach()
-        Qsa_prime_targets = Qsa_prime_target_values.max(1)[0].unsqueeze(1)
+        # print("Qsa_prime_target_values")
+        # print(Qsa_prime_target_values)
 
-        print(Qsa_prime_targets)
+        Qsa_prime_targets = Qsa_prime_target_values.gather(1, batch_actions) #?
+
+        # print("Qsa_prime_targets")
+        # print(Qsa_prime_targets)
+
 
         # Compute Q targets for current states
-        rewards = torch.tensor(batch.reward, dtype=torch.long) # TODO create torch(Rewards)
+        rewards = torch.tensor(batch.reward, dtype=torch.long) # TODO create torch(Rewards) in env.?
+
+        # print("Rewards")
+        # print(rewards)
         dones = ByteTensor(batch.done)
+        # print("done")
+        # print(dones)
+
         Qsa_targets = rewards + (self.gamma * Qsa_prime_targets * (1 - dones))
-        print(Qsa_targets)
+        # print("Qsa_targets ")
+        # print(Qsa_targets)
 
         # Compute loss (error)
         loss = F.mse_loss(Qsa, Qsa_targets)
@@ -141,7 +138,6 @@ class Agent():
         self.optimizer.step()
 
         self.soft_update(self.model, self.target_model, self.tau)
-
         return None
 
 

@@ -45,14 +45,13 @@ class FogEnv(gym.Env):
 
     def __do_state(self):
         neighs = self.__get_neighs()
-        diff = self.max_degree - len(neighs)
+        diff = self.max_degree - len(neighs) - 1 # we include the current node of the service in 0.position
         node_feats = np.array(self.features[[self.agent_alloc, *neighs]]).astype(float)
         diff_row = (np.ones(self.num_features * diff) * -1).reshape(diff, self.num_features)
         node_feats = np.vstack((node_feats, diff_row))
 
         edge_index = [[*np.zeros(len(neighs), dtype=int), *np.arange(1, len(neighs) + 1), *[-1] * diff * 2],
                       [*np.arange(1, len(neighs) + 1), *np.zeros(len(neighs), dtype=int), *[-1] * diff * 2]]
-
         return State(node_feats,edge_index)
 
     def reset(self):
@@ -67,11 +66,15 @@ class FogEnv(gym.Env):
             None
 
         if action == "Migrate":
+            # print(self.agent_alloc)
             neighs = self.__get_neighs()
-            assert len(action.dst) > 0
-            assert action.dst[0] in neighs
+            neighs = [self.agent_alloc,*neighs] # the state is composed by [itself node , + neighs]
+            # print(neighs)
+            assert len(action.relative_dst) > 0
+            i_neigh = action.relative_dst[0]
+            action.dst.append(neighs[i_neigh])
 
-            # update node features -> h, watts, ...
+            # TODO UPDATE  node features -> h, watts, ...
 
             # Reward
             goal_node = sorted(neighs)[1]  # The second lowest!
@@ -97,8 +100,8 @@ class FogEnv(gym.Env):
             done = True
             reward += 10
 
-        if not done:
-            reward -= -3
+        # if not done:
+        #     reward -= -3
 
         return self.__do_state(), reward, done
 

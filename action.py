@@ -5,11 +5,14 @@ ACTION_NAMES = ["NoOperation", "Migrate"]
 
 class Action():
 
-    def __init__(self, size, typed=0):
-        self.action = np.zeros(size)
+    def __init__(self, size, typed=0, pos_relative_action=None):
+        self.space = np.zeros(size)
         self.size = size
         self.dst = [] # DST operation using ID - node
         self.relative_dst = [] # DST operation relative POS in edge-nodes (neighbour nodes)
+        if pos_relative_action != None:
+            self.relative_dst.append(pos_relative_action)
+            self.space[pos_relative_action] = typed
 
         if isinstance(typed, int):
             assert (typed < len(ACTION_NAMES)), "Code operation not valid"
@@ -21,10 +24,10 @@ class Action():
                 raise Exception("Not valid operation")
 
     def __repr__(self):
-        return self.action
+         return ACTION_NAMES[self.code]
 
     def __str__(self):
-        return "A[%s %s: %s %s]" % (self.action, ACTION_NAMES[self.code], self.dst, self.relative_dst)
+        return "A[%s %s: %s %s]" % (self.space, ACTION_NAMES[self.code], self.dst, self.relative_dst)
 
     def __eq__(self, a2):
         if isinstance(a2, str):
@@ -45,6 +48,6 @@ def action_sample(size):
         return a
     else:
         pos = np.random.choice(size,1)[0]
-        a.action[pos]=type
+        a.space[pos]=type
         return a
 
