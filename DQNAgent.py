@@ -26,7 +26,7 @@ class Agent():
 
     def __init__(self, num_node_features, num_classes):
 
-        #TODO ADD HYPERPArAMETERS TO __INIT__
+        #TODO ADD HYPERPARAMETERS as ARGS of __INIT__
         self.gamma = 0.95  # discount rate
         self.epsilon = 0.05  # exploration rate
         self.rnd = RandomState(0)  # seed
@@ -59,8 +59,11 @@ class Agent():
             # print(data)
             # print("A",action_values)
 
-            type_oper = int(np.argmax(action_values)) # max. value of all probabilities, the index is the class of the operation
-            pos_relative_action = int(np.argmax(action_values.max(1)[0])) #Node
+            # type_oper = int(np.argmax(action_values)) # max. value of all probabilities, the index is the class of the operation
+            type_oper = int(action_values.max(1).indices[0])
+            # print(action_values.shape)
+            pos_relative_action = int(np.argmax(action_values.max(1)[0])) # which node
+            #TODO - Pointless Operations - "NoOperation in other node" are possible. Thus,  Can they be penalised?
 
             # print("type_oper",type_oper)
             # print("pos_relative_action",pos_relative_action)
@@ -86,6 +89,7 @@ class Agent():
     def optimize_model(self):
         if len(self.memory) < self.batch_size:
             return
+        # https://deeplearning.neuromatch.io/tutorials/W3D2_BasicReinforcementLearning/student/W3D2_Tutorial1.html#coding-exercise-6-1-implement-nfq
 
         samples = random.sample(self.memory, self.batch_size)
         batch = Transition(*zip(*samples)) #bestial
@@ -99,38 +103,48 @@ class Agent():
         data = list(loader_states)[0]  # loader len equals batch_size
 
         model_batch = self.model(data.x, data.edge_index, data.batch)
-        Qsa = model_batch.gather(1,batch_actions)
-        # print("QSA ")
+
+        # Qsa = model_batch.gather(1,batch_actions).unsqueeze(-1)
+        Qsa = model_batch.gather(1,batch_actions.view(-1,1)).squeeze(0)
+        # print("B) QSA ")
         # print(Qsa)
+
+
         # Q on s', a'
         loader_states_prime = self.get_loader(batch.next_state)
-        data_prime = list(loader_states_prime)[0]  # loader len equals batch_size
-
-        Qsa_prime_target_values = self.target_model(data_prime.x,data_prime.edge_index,data_prime.batch).detach()
-        # print("Qsa_prime_target_values")
-        # print(Qsa_prime_target_values)
-
-        Qsa_prime_targets = Qsa_prime_target_values.gather(1, batch_actions) #?
-
-        # print("Qsa_prime_targets")
-        # print(Qsa_prime_targets)
+        data_next_state = list(loader_states_prime)[0]  # loader len equals batch_size
 
 
         # Compute Q targets for current states
         rewards = torch.tensor(batch.reward, dtype=torch.long) # TODO create torch(Rewards) in env.?
-
+        rewards = rewards.reshape(12,1)
         # print("Rewards")
         # print(rewards)
         dones = ByteTensor(batch.done)
         # print("done")
         # print(dones)
 
-        Qsa_targets = rewards + (self.gamma * Qsa_prime_targets * (1 - dones))
-        # print("Qsa_targets ")
-        # print(Qsa_targets)
+        with torch.no_grad():
+            Qsa_prime_target_values = self.target_model(data_next_state.x,data_next_state.edge_index,data_next_state.batch).detach()
+            # print(Qsa_prime_target_values)
+            # print(Qsa_prime_target_values.shape)
+
+            # Qsa_prime_targets = Qsa_prime_target_values.max(axis=-1)[0]
+            Qsa_prime_targets = Qsa_prime_target_values.max(1)[0].unsqueeze(1)
+
+            # print("Qsa_prime_targets")
+            # print(Qsa_prime_targets)
+
+            Qsa_targets = rewards + (self.gamma * Qsa_prime_targets ) #* (1 - dones))
+            # print("A) Qsa_targets ")
+            Qsa_targets = Qsa_targets.squeeze(1)
+            # print(Qsa_targets)
+
+
 
         # Compute loss (error)
-        loss = F.mse_loss(Qsa, Qsa_targets)
+        loss = F.mse_loss(Qsa_targets, Qsa)
+        # print("LOSS: ",loss)
 
         # Minimize the loss
         self.optimizer.zero_grad()

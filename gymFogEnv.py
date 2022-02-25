@@ -19,7 +19,7 @@ class FogEnv(gym.Env):
         self.edge_nodes = edge_nodes
 
         self.max_degree = max(dict(nx.degree(self.G)).values())
-        self.action_space = self.max_degree
+        self.action_space = self.max_degree + 1
 
         # Future issue: level in other type of topologies?
         self.level_node = nx.single_source_shortest_path_length(self.G,
@@ -44,8 +44,9 @@ class FogEnv(gym.Env):
         return np.array([n for n in self.G.neighbors(self.agent_alloc)])
 
     def __do_state(self):
+        # print("Agent Alloc is: ",self.agent_alloc)
         neighs = self.__get_neighs()
-        diff = self.max_degree - len(neighs) - 1 # we include the current node of the service in 0.position
+        diff = max(0,self.action_space - len(neighs) - 1) # we include the current node of the service in 0.position
         node_feats = np.array(self.features[[self.agent_alloc, *neighs]]).astype(float)
         diff_row = (np.ones(self.num_features * diff) * -1).reshape(diff, self.num_features)
         node_feats = np.vstack((node_feats, diff_row))
@@ -102,8 +103,10 @@ class FogEnv(gym.Env):
 
         # if not done:
         #     reward -= -3
+        space_reward = np.zeros(action.size)
+        space_reward[i_neigh] = reward
 
-        return self.__do_state(), reward, done
+        return self.__do_state(), space_reward, done
 
     def render(self, **kwargs):
         fig, ax = plt.subplots(figsize=(9.0, 6.0))

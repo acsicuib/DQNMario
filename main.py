@@ -11,6 +11,10 @@ from DQNAgent import Agent
 from action import Action, action_sample, ACTION_NAMES
 from gymFogEnv import FogEnv
 
+import warnings
+warnings.filterwarnings("ignore")
+
+
 seed = 0
 random.seed = seed
 np.random.seed(seed)
@@ -38,7 +42,8 @@ state, done = env.reset()
 env = FogEnv(G, pos, edge_nodes)
 env.seed(seed)
 env.reset()
-print("Max. action space ", env.max_degree)
+print("Max. graph degree ", env.max_degree)
+print("Size action space ", env.action_space)
 
 episodes = 3
 frame = 1
@@ -61,27 +66,36 @@ for episode in range(1,episodes+1):
     state, done = env.reset()
 
     score = 0
+    step = 0
+
+    print("-" * 50)
+    print("EPISODE: ",episode)
+    print("-" * 50)
     while not done:
 
+        print("%i | Agent Alloc is: %i"%(step,env.agent_alloc))
         action = agent.act(state,env.action_space)
         # action = agent.pickOne(state,env.action_space)
-        # print(state["feat"])
-        # print("HERE")
-        print(action)
+        print("%i | Action: %s"%(step,action))
 
         state_next, reward, done = env.step(action)
 
+        print("%i | Reward : %s"%(step,reward))
+        print("%i | new Agent Alloc : %i" % (step, env.agent_alloc))
+        print("-"*50)
+
         agent.remember(state, action, reward, state_next, done)
-        loss = agent.optimize_model()  # or train the model after each action?
-        #
-        # if render:
-        #     env.render(text='episode: {}, step: {}, action: {}, reward: {}'.format(episode, frame - start_frame, action,
-        #                                                                            reward),
-        #                path="tmp/images/image_%08d.png" % (frame))
-        #
+        loss = agent.optimize_model()
+
+        if render:
+            env.render(text='episode: {}, step: {}, action: {}, reward: {}'.format(episode, frame - start_frame, action,
+                                                                                   reward),
+                       path="tmp/images/image_%08d.png" % (frame))
+
         state = state_next
         score += reward
         frame += 1
+        step += 1
 
 
     # end_time = timer()

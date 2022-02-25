@@ -24,6 +24,8 @@ https://pytorch-geometric.readthedocs.io/en/latest/notes/installation.html
     
    
 ## References:
+- https://deeplearning.neuromatch.io/tutorials/W3D2_BasicReinforcementLearning/student/W3D2_Tutorial1.html
+- https://deeplearning.neuromatch.io/tutorials/W3D3_ReinforcementLearningForGames/student/W3D3_Tutorial1.html
 - https://github.com/xkiwilabs/DQN-using-PyTorch-and-ML-Agents
 - https://github.com/Beshario/DRL-Robotics-Arm/blob/516b0cac91452a28d4cd91d698ab4a5d323e13b5/python/DQN.py#L419
 - https://github.com/cpnota/autonomous-learning-library/blob/aaa5403ead52f1175b460fc3984864355c575061/all/experiments/single_env_experiment.py
