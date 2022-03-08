@@ -109,8 +109,8 @@ for episode in range(1,episodes+1):
     fps = (frame - start_frame) / (end_time - start_time)
     moves = step
     # To comment
-    if moves <10:
-        print('episode: {}, frame: {}, moves: {}, score: {}'.format(episode, frame, int(moves), score))
+
+    print('episode: {}, frame: {}, moves: {}, score: {}'.format(episode, frame, int(moves), score))
 
     writer.add_scalar('fps', fps, episode)
     writer.add_scalar('score/frame', score, episode)
