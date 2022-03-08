@@ -55,6 +55,7 @@ frame = 1
 render = False
 batch_size = 30
 
+print("Episodes: ",episodes)
 agent = Agent(num_node_features=env.num_features, num_classes=len(ACTION_NAMES))
 
 if render:
