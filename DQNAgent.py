@@ -117,7 +117,7 @@ class Agent():
 
         # Compute Q targets for current states
         rewards = torch.tensor(batch.reward, dtype=torch.long) # TODO create torch(Rewards) in env.?
-        rewards = rewards.reshape(12,1)
+        # rewards = rewards.reshape(12,1)
         # print("Rewards")
         # print(rewards)
         dones = ByteTensor(batch.done)

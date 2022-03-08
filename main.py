@@ -45,10 +45,10 @@ env.reset()
 print("Max. graph degree ", env.max_degree)
 print("Size action space ", env.action_space)
 
-episodes = 30
+episodes = 300
 frame = 1
-render = True
-batch_size = 20
+render = False
+batch_size = 30
 
 agent = Agent(num_node_features=env.num_features, num_classes=len(ACTION_NAMES))
 

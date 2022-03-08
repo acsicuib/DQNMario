@@ -114,10 +114,10 @@ class FogEnv(gym.Env):
 
         # if not done:
         #     reward -= -3
-        space_reward = np.zeros(action.size)
-        space_reward[i_neigh] = reward
+        # space_reward = np.zeros(action.size)
+        # space_reward[i_neigh] = reward
 
-        return self.__do_state(), space_reward, done
+        return self.__do_state(), reward, done
 
     def render(self, **kwargs):
         fig, ax = plt.subplots(figsize=(9.0, 6.0))
