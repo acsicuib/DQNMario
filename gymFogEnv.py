@@ -93,11 +93,11 @@ class FogEnv(gym.Env):
             if not semantic_operation_ok:
                 reward = 0 # It will finish the episode
             elif action.dst[0] == goal_node:
-                reward = 10  # Values - Ranges...
+                reward = 100  # Values - Ranges...
             elif action.dst[0] == min(neighs):
                 reward = -2  # go back
             else:
-                reward = 2 #migrate to "lower-levels"
+                reward = 20 #migrate to "lower-levels"
 
             # Update structures and var controls
             if semantic_operation_ok:
@@ -110,7 +110,7 @@ class FogEnv(gym.Env):
             reward = -10
         if self.agent_alloc in self.edge_nodes:
             done = True
-            reward += 10
+            reward += 1000
         elif self.current_steps == 0:
             done = True
             reward = -10
