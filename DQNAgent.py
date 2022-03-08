@@ -103,7 +103,7 @@ class Agent():
         data = list(loader_states)[0]  # loader len equals batch_size
 
         model_batch = self.model(data.x, data.edge_index, data.batch)
-
+#test
         # Qsa = model_batch.gather(1,batch_actions).unsqueeze(-1)
         Qsa = model_batch.gather(1,batch_actions.view(-1,1)).squeeze(0)
         # print("B) QSA ")
