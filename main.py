@@ -45,10 +45,10 @@ env.reset()
 print("Max. graph degree ", env.max_degree)
 print("Size action space ", env.action_space)
 
-episodes = 3
+episodes = 30
 frame = 1
 render = True
-batch_size = 10
+batch_size = 20
 
 agent = Agent(num_node_features=env.num_features, num_classes=len(ACTION_NAMES))
 
@@ -68,21 +68,21 @@ for episode in range(1,episodes+1):
     score = 0
     step = 0
 
-    print("-" * 50)
-    print("EPISODE: ",episode)
-    print("-" * 50)
+    # print("-" * 50)
+    # print("EPISODE: ",episode)
+    # print("-" * 50)
     while not done:
 
-        print("%i | Agent Alloc is: %i"%(step,env.agent_alloc))
+        # print("%i | Agent Alloc is: %i"%(step,env.agent_alloc))
         action = agent.act(state,env.action_space)
         # action = agent.pickOne(state,env.action_space)
-        print("%i | Action: %s"%(step,action))
+        # print("%i | Action: %s"%(step,action))
 
         state_next, reward, done = env.step(action)
 
-        print("%i | Reward : %s"%(step,reward))
-        print("%i | new Agent Alloc : %i" % (step, env.agent_alloc))
-        print("-"*50)
+        # print("%i | Reward : %s"%(step,reward))
+        # print("%i | new Agent Alloc : %i" % (step, env.agent_alloc))
+        # print("-"*50)
 
         agent.remember(state, action, reward, state_next, done)
         loss = agent.optimize_model()
@@ -98,13 +98,13 @@ for episode in range(1,episodes+1):
         step += 1
 
 
-    # end_time = timer()
-    # fps = (frame - start_frame) / (end_time - start_time)
-    # # To comment
-    # print('episode: {}, frame: {}, fps: {}, score: {}'.format(episode, frame, int(fps), score))
-    #
-    # writer.add_scalar('fps', fps, episode)
-    # writer.add_scalar('score/frame', score, episode)
-    # writer.add_scalar('score/episode', score, episode)
+    end_time = timer()
+    fps = (frame - start_frame) / (end_time - start_time)
+    # To comment
+    print('episode: {}, frame: {}, fps: {}, score: {}'.format(episode, frame, int(fps), score))
+
+    writer.add_scalar('fps', fps, episode)
+    writer.add_scalar('score/frame', score, episode)
+    writer.add_scalar('score/episode', score, episode)
 
 writer.close()

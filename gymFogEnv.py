@@ -62,6 +62,8 @@ class FogEnv(gym.Env):
 
     def step(self, action):
         reward = 0
+        semantic_operation_ok = True
+        i_neigh = 0
 
         if action == "NoOperation":
             None
@@ -73,7 +75,13 @@ class FogEnv(gym.Env):
             # print(neighs)
             assert len(action.relative_dst) > 0
             i_neigh = action.relative_dst[0]
-            action.dst.append(neighs[i_neigh])
+
+            # assert i_neigh < len(neighs),"Try to reach a fake node " #[-1,-1,-1,...]
+            if i_neigh < len(neighs):
+                action.dst = []
+                action.dst.append(neighs[i_neigh])
+            else:
+                semantic_operation_ok = False
 
             # TODO UPDATE  node features -> h, watts, ...
 
@@ -81,7 +89,9 @@ class FogEnv(gym.Env):
             goal_node = sorted(neighs)[1]  # The second lowest!
             levelpast = self.level_node[self.agent_alloc]
 
-            if action.dst[0] == goal_node:
+            if not semantic_operation_ok:
+                reward -= 100
+            elif action.dst[0] == goal_node:
                 reward += 10  # Values - Ranges...
             elif action.dst[0] == min(neighs):
                 reward -= 5  # go back
@@ -89,7 +99,8 @@ class FogEnv(gym.Env):
                 reward += 2
 
             # Update structures and var controls
-            self.agent_alloc = int(action.dst[0])
+            if semantic_operation_ok:
+                self.agent_alloc = int(action.dst[0])
 
         self.current_steps -= 1
 
