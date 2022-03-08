@@ -67,7 +67,11 @@ class FogEnv(gym.Env):
         done = False
 
         if action == "NoOperation":
-            None
+            if self.agent_alloc in self.edge_nodes: # Never reach this end-condition
+                done = True
+                reward = 2
+            else:
+                reward = -2 #stay in the same node
 
         if action == "Migrate":
             # print(self.agent_alloc)
@@ -97,7 +101,7 @@ class FogEnv(gym.Env):
             elif action.dst[0] == min(neighs):
                 reward = -2  # go back
             else:
-                reward = 20 #migrate to "lower-levels"
+                reward = 2 # migrate to "below-levels"
 
             # Update structures and var controls
             if semantic_operation_ok:
@@ -107,10 +111,10 @@ class FogEnv(gym.Env):
 
         if not semantic_operation_ok:
             done = True
-            reward = -10
+            reward = -100
         if self.agent_alloc in self.edge_nodes:
             done = True
-            reward += 1000
+            reward = reward
         elif self.current_steps == 0:
             done = True
             reward = -10
