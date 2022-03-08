@@ -64,6 +64,7 @@ class FogEnv(gym.Env):
         reward = 0
         semantic_operation_ok = True
         i_neigh = 0
+        done = False
 
         if action == "NoOperation":
             None
@@ -90,7 +91,7 @@ class FogEnv(gym.Env):
             levelpast = self.level_node[self.agent_alloc]
 
             if not semantic_operation_ok:
-                reward = -10
+                reward = 0 # It will finish the episode
             elif action.dst[0] == goal_node:
                 reward = 10  # Values - Ranges...
             elif action.dst[0] == min(neighs):
@@ -104,7 +105,9 @@ class FogEnv(gym.Env):
 
         self.current_steps -= 1
 
-        done = False
+        if not semantic_operation_ok:
+            done = True
+            reward = -10
         if self.agent_alloc in self.edge_nodes:
             done = True
             reward += 10
