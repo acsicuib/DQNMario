@@ -56,6 +56,7 @@ render = False
 batch_size = 30
 
 print("Episodes: ",episodes)
+print("HERE")
 agent = Agent(num_node_features=env.num_features, num_classes=len(ACTION_NAMES))
 
 if render:
