@@ -53,7 +53,7 @@ print("Size action space ", env.action_space)
 episodes = args.e
 frame = 1
 render = False
-batch_size = 30
+batch_size = 100
 
 print("Episodes: ",episodes)
 print("HERE")
@@ -107,8 +107,9 @@ for episode in range(1,episodes+1):
 
     end_time = timer()
     fps = (frame - start_frame) / (end_time - start_time)
+    moves = step
     # To comment
-    print('episode: {}, frame: {}, fps: {}, score: {}'.format(episode, frame, int(fps), score))
+    print('episode: {}, frame: {}, moves: {}, score: {}'.format(episode, frame, int(moves), score))
 
     writer.add_scalar('fps', fps, episode)
     writer.add_scalar('score/frame', score, episode)
