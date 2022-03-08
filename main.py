@@ -10,9 +10,14 @@ from tqdm import tqdm
 from DQNAgent import Agent
 from action import Action, action_sample, ACTION_NAMES
 from gymFogEnv import FogEnv
-
+import argparse
 import warnings
 warnings.filterwarnings("ignore")
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-e', type=int,default=10,help="episodes")
+
+args = parser.parse_args()
 
 
 seed = 0
@@ -45,7 +50,7 @@ env.reset()
 print("Max. graph degree ", env.max_degree)
 print("Size action space ", env.action_space)
 
-episodes = 300
+episodes = args.e
 frame = 1
 render = False
 batch_size = 30
