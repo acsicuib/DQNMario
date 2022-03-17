@@ -33,7 +33,8 @@ class FogEnv(gym.Env):
         for n in self.G.nodes():
             hwr = (self.number_levels - self.level_node[n]) * 10
             watts = (0.2 if n % 2 == 0 else 2.4)
-            features.append([n, centrality[n], self.level_node[n], hwr, watts, int(n in self.edge_nodes)])
+            # features.append([n, centrality[n], self.level_node[n], hwr, watts, int(n in self.edge_nodes)])
+            features.append([n,self.level_node[n], int(n in self.edge_nodes)])
 
         self.features = np.array(features)
         self.num_features = self.features.shape[1]
